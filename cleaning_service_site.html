@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hearth & Order — Trusted Cleaning Co.</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@300;400;500;600;700&display=swap">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  html, body {
+    margin: 0; padding: 0; color: #14241c;
+    font-family: 'Manrope', system-ui, sans-serif;
+    /* Layered warmth so the page feels like handmade paper, not a flat cream */
+    background:
+      radial-gradient(ellipse 1200px 800px at 10% -10%, rgba(198,107,61,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 1400px 900px at 110% 110%, rgba(26,58,46,0.09) 0%, transparent 55%),
+      radial-gradient(ellipse 900px 700px at 50% 50%, rgba(250,247,240,0.6) 0%, transparent 60%),
+      #eee7d9;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  input:focus { outline: none; box-shadow: inset 0 0 0 2px #14241c; }
+  /* Site-wide grain — two tileable SVG noise layers applied as background-image */
+  .grain-layer {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    opacity: 0.55;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch' seed='7'/><feColorMatrix values='0 0 0 0 0.10  0 0 0 0 0.16  0 0 0 0 0.12  0 0 0 0.80 0'/></filter><rect width='320' height='320' filter='url(%23n)'/></svg>");
+    background-repeat: repeat;
+    background-size: 320px 320px;
+  }
+  .grain-layer-fine {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    opacity: 0.50;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='2.2' numOctaves='2' stitchTiles='stitch' seed='13'/><feColorMatrix values='0 0 0 0 0.38  0 0 0 0 0.22  0 0 0 0 0.14  0 0 0 0.40 0'/></filter><rect width='180' height='180' filter='url(%23f)'/></svg>");
+    background-repeat: repeat;
+    background-size: 180px 180px;
+  }
+  #boot {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 300; font-size: 1.2rem; letter-spacing: -0.01em;
+    color: #14241c; opacity: 0.5; z-index: 0;
+  }
+  /* Ensure all content sits above the texture layers */
+  #root > * { position: relative; z-index: 2; }
+</style>
+</head>
+<body>
+
+<div id="root">
+  <div id="boot">Hearth &amp; Order — preparing the site…</div>
+</div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo } = React;
+
+/* =========================================================
+   ICONS — inline SVG, Lucide paths, drop-in replacements
+   ========================================================= */
+const Icon = ({ children, size = 24, color, className, style, ...rest }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+       fill="none" stroke={color || 'currentColor'} strokeWidth="2"
+       strokeLinecap="round" strokeLinejoin="round"
+       className={className} style={style} {...rest}>
+    {children}
+  </svg>
+);
+const ArrowRight   = (p) => <Icon {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></Icon>;
+const BadgeCheck   = (p) => <Icon {...p}><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></Icon>;
+const Building2    = (p) => <Icon {...p}><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></Icon>;
+const Calendar     = (p) => <Icon {...p}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></Icon>;
+const Check        = (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>;
+const ChevronLeft  = (p) => <Icon {...p}><path d="m15 18-6-6 6-6"/></Icon>;
+const Clock        = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
+const Clock3       = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/></Icon>;
+const CreditCard   = (p) => <Icon {...p}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></Icon>;
+const Feather      = (p) => <Icon {...p}><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" x2="2" y1="8" y2="22"/><line x1="17.5" x2="9" y1="15" y2="15"/></Icon>;
+const FileCheck    = (p) => <Icon {...p}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></Icon>;
+const HomeIcon     = (p) => <Icon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
+const Lock         = (p) => <Icon {...p}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Icon>;
+const Mail         = (p) => <Icon {...p}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></Icon>;
+const MapPin       = (p) => <Icon {...p}><path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></Icon>;
+const Phone        = (p) => <Icon {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></Icon>;
+const RefreshCw    = (p) => <Icon {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></Icon>;
+const Shield       = (p) => <Icon {...p}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></Icon>;
+const ShieldCheck  = (p) => <Icon {...p}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></Icon>;
+const Sparkles     = (p) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></Icon>;
+const Star         = (p) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
+const UserCheck    = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></Icon>;
+const X            = (p) => <Icon {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>;
+
+/* =========================================================
+   CONFIG
+   ========================================================= */
+const PACKAGES = {
+  home: [
+    { id: 'essential', name: 'Essential', tagline: 'Weekly upkeep, never a missed corner.',
+      price: 149, duration: '2–3 hrs',
+      includes: ['All living areas & bedrooms','Bathrooms sanitized floor-to-fixture','Kitchen surfaces, exterior appliances, floors','Dusting, vacuuming, mopping','Trash removed, linens straightened'] },
+    { id: 'deep', name: 'Deep Clean', tagline: 'The reset your home has been begging for.',
+      price: 289, duration: '4–5 hrs', popular: true,
+      includes: ['Everything in Essential','Baseboards, door frames, vents','Inside oven & refrigerator','Cabinet fronts degreased','Hand-wiped light fixtures & switches','Under furniture & behind appliances'] },
+    { id: 'premium', name: 'White Glove', tagline: 'Every surface, every seam, no compromises.',
+      price: 479, duration: '6–8 hrs',
+      includes: ['Everything in Deep Clean','Interior windows & tracks','Inside all cabinets & drawers','Upholstery spot-treatment','Closet organization reset','Fresh linens placed, beds made'] },
+  ],
+  business: [
+    { id: 'essential', name: 'Office Standard', tagline: 'A workspace your team is proud to walk into.',
+      price: 219, duration: '2–4 hrs',
+      includes: ['Desks, conference rooms, common areas','Restrooms sanitized & restocked','Break room & kitchenette','Trash, recycling, vacuuming, mopping','Glass & entry surfaces'] },
+    { id: 'deep', name: 'Commercial Deep', tagline: 'For spaces that host clients and demand trust.',
+      price: 389, duration: '4–6 hrs', popular: true,
+      includes: ['Everything in Office Standard','Baseboards, vents, high-touch detail','Appliance interiors in break rooms','Carpet spot-treatment','Disinfection of shared equipment','Window interiors'] },
+    { id: 'premium', name: 'Executive Suite', tagline: 'Hospitality-grade standards, every visit.',
+      price: 649, duration: '6–10 hrs',
+      includes: ['Everything in Commercial Deep','Full interior windows','Upholstery & carpet deep-treatment','Supplies inventory & restocking','Post-event reset service','Dedicated account lead'] },
+  ],
+};
+
+const ADDONS = [
+  { id: 'oven', label: 'Inside oven', price: 45 },
+  { id: 'fridge', label: 'Inside refrigerator', price: 35 },
+  { id: 'windows', label: 'Interior windows', price: 60 },
+  { id: 'laundry', label: 'Laundry service (2 loads)', price: 40 },
+  { id: 'organize', label: 'Pantry / closet organizing', price: 80 },
+  { id: 'pet', label: 'Extra pet-hair treatment', price: 25 },
+];
+
+const TIME_WINDOWS = [
+  { id: '8-10',  label: '8:00 — 10:00 AM' },
+  { id: '10-12', label: '10:00 AM — 12:00 PM' },
+  { id: '12-2',  label: '12:00 — 2:00 PM' },
+  { id: '2-4',   label: '2:00 — 4:00 PM' },
+  { id: '4-6',   label: '4:00 — 6:00 PM' },
+];
+
+const SUBSCRIPTIONS = [
+  { id: 'weekly',   label: 'Weekly',        discount: 25, sub: 'Same team every Tuesday (or your day).' },
+  { id: 'biweekly', label: 'Every 2 Weeks', discount: 20, sub: 'Most popular. A clean that stays clean.' },
+  { id: 'monthly',  label: 'Monthly',       discount: 15, sub: 'A reliable reset, once a month.' },
+];
+
+const COLORS = {
+  bg: '#f2ede3', ink: '#14241c', forest: '#1a3a2e', forestDeep: '#0f2a20',
+  terra: '#c66b3d', terraDeep: '#a8542d', muted: '#6b7a70', line: '#d9d1c1', paper: '#faf7f0',
+};
+
+/* =========================================================
+   UTILITY COMPONENTS
+   ========================================================= */
+function GrainOverlay() {
+  return (
+    <>
+      <div className="grain-layer" aria-hidden />
+      <div className="grain-layer-fine" aria-hidden />
+    </>
+  );
+}
+
+function SerifNum({ n }) {
+  return (
+    <span style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, fontStyle: 'italic' }}
+          className="text-xs tracking-widest opacity-60">
+      {String(n).padStart(2, '0')}
+    </span>
+  );
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+function Nav({ onBook, page, go }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', h);
+    return () => window.removeEventListener('scroll', h);
+  }, []);
+  const links = [
+    { id: 'services', label: 'Services' },
+    { id: 'cleaners', label: 'Our Cleaners' },
+    { id: 'promise',  label: 'Promise' },
+    { id: 'reviews',  label: 'Reviews' },
+  ];
+  return (
+    <nav className={`fixed top-0 inset-x-0 z-40 transition-all duration-500 ${scrolled ? 'py-3 backdrop-blur-md' : 'py-6'}`}
+         style={{ backgroundColor: scrolled ? 'rgba(242,237,227,0.85)' : 'transparent',
+                  borderBottom: scrolled ? `1px solid ${COLORS.line}` : '1px solid transparent' }}>
+      <div className="max-w-7xl mx-auto px-6 md:px-10 flex items-center justify-between">
+        <button onClick={() => go('home')} className="flex items-center gap-2 cursor-pointer">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.forest }}>
+            <Feather size={16} color={COLORS.bg} />
+          </div>
+          <div className="leading-none text-left">
+            <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500, letterSpacing: '-0.02em' }} className="text-lg">
+              Hearth & Order
+            </div>
+            <div style={{ fontFamily: 'Manrope, sans-serif' }} className="text-[10px] uppercase tracking-[0.2em] opacity-60">
+              Trusted Cleaning Co.
+            </div>
+          </div>
+        </button>
+        <div className="hidden md:flex items-center gap-8 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          {links.map(l => {
+            const active = page === l.id;
+            return (
+              <button key={l.id}
+                      onClick={() => go(l.id)}
+                      className="relative hover:opacity-60 transition"
+                      style={{ opacity: active ? 1 : 0.85 }}>
+                {l.label}
+                {active && (
+                  <span className="absolute -bottom-1.5 left-0 right-0 h-px"
+                        style={{ backgroundColor: COLORS.terra }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <button onClick={onBook}
+                className="group relative overflow-hidden px-5 md:px-7 py-3 text-sm font-medium transition-all"
+                style={{ backgroundColor: COLORS.terra, color: COLORS.paper,
+                         fontFamily: 'Manrope, sans-serif', letterSpacing: '0.02em' }}>
+          <span className="relative z-10 flex items-center gap-2">
+            Book Now
+            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </span>
+          <span className="absolute inset-0 transition-transform duration-300 origin-left scale-x-0 group-hover:scale-x-100"
+                style={{ backgroundColor: COLORS.terraDeep }} />
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+function Hero({ onBook, go }) {
+  return (
+    <section className="relative pt-40 pb-24 md:pt-48 md:pb-32 px-6 md:px-10 overflow-hidden">
+      <div className="max-w-7xl mx-auto relative">
+        <div className="absolute right-0 top-0 hidden lg:block opacity-[0.05] pointer-events-none"
+             style={{ fontFamily: 'Fraunces, serif', fontSize: '22rem', lineHeight: 1, fontWeight: 300 }}>
+          01
+        </div>
+        <div className="mb-10 flex items-center gap-3">
+          <div className="h-px w-12" style={{ backgroundColor: COLORS.ink }} />
+          <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-[0.3em] opacity-70">
+            Est. 2014 · Fully Bonded & Insured
+          </span>
+        </div>
+        <h1 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 0.95 }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-[8rem] max-w-5xl">
+          Walk into a home<br/>
+          that finally feels<br/>
+          <em style={{ fontWeight: 300, color: COLORS.terra }}>like yours.</em>
+        </h1>
+        <div className="grid md:grid-cols-12 gap-8 mt-12 md:mt-16">
+          <div className="md:col-span-6 md:col-start-7" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            <p className="text-lg md:text-xl leading-relaxed opacity-80">
+              A meticulous clean by a team you can actually trust. Every cleaner is <strong>background-checked, bonded, insured, and vouched for</strong> — because letting a stranger into your home shouldn't feel like a gamble.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <button onClick={onBook}
+                      className="group flex items-center gap-3 px-8 py-5 text-sm font-medium transition-all"
+                      style={{ backgroundColor: COLORS.ink, color: COLORS.bg,
+                               fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+                <span>SCHEDULE YOUR CLEANING</span>
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button onClick={() => go('cleaners')}
+                 className="text-sm underline underline-offset-4 decoration-1 opacity-70 hover:opacity-100 transition"
+                 style={{ fontFamily: 'Manrope, sans-serif' }}>
+                How we vet our cleaners →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   TRUST BAR
+   ========================================================= */
+function TrustBar() {
+  const stats = [
+    { n: '12,400+', l: 'Homes cleaned' },
+    { n: '4.9 / 5', l: 'Avg. rating, 3,100 reviews' },
+    { n: '3.4 yrs', l: 'Avg. cleaner tenure' },
+    { n: '$2M',     l: 'Coverage per job' },
+  ];
+  return (
+    <section className="border-y py-10 md:py-14 px-6 md:px-10" style={{ borderColor: COLORS.line }}>
+      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+        {stats.map((s, i) => (
+          <div key={i} className="flex flex-col">
+            <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                 className="text-4xl md:text-5xl">
+              {s.n}
+            </div>
+            <div style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-widest opacity-60 mt-2">
+              {s.l}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   SERVICES
+   ========================================================= */
+function Services({ onBook }) {
+  const [tab, setTab] = useState('home');
+  const pkgs = PACKAGES[tab];
+  return (
+    <section id="services" className="py-24 md:py-32 px-6 md:px-10">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-start justify-between flex-wrap gap-8 mb-14">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <SerifNum n={2}/>
+              <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-[0.3em] opacity-60">
+                The Service
+              </span>
+            </div>
+            <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                className="text-4xl md:text-6xl max-w-2xl leading-[1]">
+              Built for the life<br/>you actually live.
+            </h2>
+          </div>
+          <div className="flex border" style={{ borderColor: COLORS.ink }}>
+            <button onClick={() => setTab('home')}
+                    className="flex items-center gap-2 px-6 py-3 text-sm transition-colors"
+                    style={{ backgroundColor: tab === 'home' ? COLORS.ink : 'transparent',
+                             color: tab === 'home' ? COLORS.bg : COLORS.ink,
+                             fontFamily: 'Manrope, sans-serif' }}>
+              <HomeIcon size={16}/> Homes
+            </button>
+            <button onClick={() => setTab('business')}
+                    className="flex items-center gap-2 px-6 py-3 text-sm transition-colors border-l"
+                    style={{ backgroundColor: tab === 'business' ? COLORS.ink : 'transparent',
+                             color: tab === 'business' ? COLORS.bg : COLORS.ink,
+                             borderColor: COLORS.ink,
+                             fontFamily: 'Manrope, sans-serif' }}>
+              <Building2 size={16}/> Businesses
+            </button>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+          {pkgs.map((p, i) => (
+            <div key={p.id}
+                 className="relative p-8 md:p-10 flex flex-col transition-all hover:-translate-y-1 duration-300"
+                 style={{ backgroundColor: p.popular ? COLORS.forest : COLORS.paper,
+                          color: p.popular ? COLORS.bg : COLORS.ink,
+                          border: `1px solid ${p.popular ? COLORS.forest : COLORS.line}` }}>
+              {p.popular && (
+                <div className="absolute -top-3 left-8 px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
+                     style={{ backgroundColor: COLORS.terra, color: COLORS.paper, fontFamily: 'Manrope, sans-serif' }}>
+                  Most Chosen
+                </div>
+              )}
+              <div className="flex items-baseline justify-between mb-6">
+                <SerifNum n={i + 1}/>
+                <div className="text-right">
+                  <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.02em' }} className="text-3xl">
+                    ${p.price}
+                  </div>
+                  <div style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-widest opacity-70">
+                    {p.duration}
+                  </div>
+                </div>
+              </div>
+              <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.02em' }} className="text-3xl mb-2">
+                {p.name}
+              </h3>
+              <p className="text-sm italic mb-6 opacity-80" style={{ fontFamily: 'Fraunces, serif' }}>
+                "{p.tagline}"
+              </p>
+              <ul className="space-y-3 mb-8 flex-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                {p.includes.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm">
+                    <Check size={16} className="mt-0.5 flex-shrink-0"
+                           style={{ color: p.popular ? COLORS.terra : COLORS.forest }}/>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <button onClick={onBook}
+                      className="w-full py-4 text-sm font-medium transition-colors"
+                      style={{ backgroundColor: p.popular ? COLORS.terra : COLORS.ink,
+                               color: COLORS.bg, fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+                BOOK {p.name.toUpperCase()}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   VETTING
+   ========================================================= */
+function VettingSection() {
+  const steps = [
+    { icon: FileCheck, title: 'Seven-layer background check',
+      body: 'Federal, state & county criminal records, sex offender registry, national wants & warrants, SSN trace, driving record, and employment history — re-run every 12 months. No exceptions, no shortcuts.' },
+    { icon: UserCheck, title: 'Three professional references',
+      body: 'Every cleaner arrives with three independently verified references from prior professional work — not friends, not family. We call. We ask the hard questions.' },
+    { icon: Clock3, title: 'Minimum 18 months before solo work',
+      body: 'New hires spend a minimum of 18 months paired with a senior cleaner before ever working a home alone. Our average team tenure is 3.4 years — nearly triple the industry.' },
+    { icon: ShieldCheck, title: '$2M bonded, insured, and named',
+      body: "Every cleaner is personally bonded and insured under our policy — not a third-party contractor's. If something breaks or goes missing, we handle it directly. Full stop." },
+  ];
+  return (
+    <section id="trust" className="py-24 md:py-32 px-6 md:px-10 relative"
+             style={{ backgroundColor: COLORS.forest, color: COLORS.bg }}>
+      <div className="max-w-7xl mx-auto relative">
+        <div className="grid md:grid-cols-12 gap-12">
+          <div className="md:col-span-5">
+            <div className="flex items-center gap-3 mb-4">
+              <SerifNum n={3}/>
+              <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-[0.3em] opacity-70">
+                The People
+              </span>
+            </div>
+            <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                className="text-4xl md:text-6xl leading-[0.95]">
+              The hardest part of hiring a cleaner isn't the cleaning.
+            </h2>
+            <p className="mt-8 text-lg opacity-80 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              It's trusting the person with a key to your home, your office, your child's bedroom.
+              We treat that trust as the entire product. The clean is just what happens after.
+            </p>
+            <div className="mt-10 p-6 border" style={{ borderColor: 'rgba(242,237,227,0.2)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <BadgeCheck size={20} style={{ color: COLORS.terra }}/>
+                <span className="text-xs uppercase tracking-widest" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  Request your Team Dossier
+                </span>
+              </div>
+              <p className="text-sm opacity-80" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Before your first clean, we send you photos, years of service, training certifications,
+                and specialties of your assigned team. You'll know exactly who's at your door.
+              </p>
+            </div>
+          </div>
+          <div className="md:col-span-7 space-y-8">
+            {steps.map((s, i) => {
+              const IconC = s.icon;
+              return (
+                <div key={i} className="flex gap-6 pb-8 border-b last:border-0"
+                     style={{ borderColor: 'rgba(242,237,227,0.15)' }}>
+                  <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center"
+                       style={{ border: `1px solid ${COLORS.terra}` }}>
+                    <IconC size={20} style={{ color: COLORS.terra }}/>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-2"><SerifNum n={i + 1}/></div>
+                    <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 400 }} className="text-2xl mb-2">
+                      {s.title}
+                    </h3>
+                    <p className="opacity-80 leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      {s.body}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   FEARS / PROMISE
+   ========================================================= */
+function FearsSection() {
+  const fears = [
+    { fear: 'What if they steal something?',
+      answer: "Every cleaner is bonded and insured under our $2M policy — in their name, not a contractor's. We handle claims directly in 48 hours. In eleven years, it's happened twice. Both were resolved the same week." },
+    { fear: 'What if they do a rushed, half-done job?',
+      answer: "Every clean is backed by our 24-hour re-clean guarantee. Not satisfied? Text us a photo. We're back the next business day — free, no questions, no forms to fill out." },
+    { fear: 'What if I get a different stranger every time?',
+      answer: "You don't. We assign you a primary team based on your home and schedule. They return each visit. If your primary is sick, your backup has already been to your home with them at least twice." },
+    { fear: 'What if the price keeps creeping up?',
+      answer: 'Subscriptions are price-locked for 24 months. One-time cleans are flat-rate — the price you see at booking is the price you pay. No trip fees, no "supplies fees," no surprises on the invoice.' },
+    { fear: "What if I'm not home and something goes wrong?",
+      answer: 'Every team logs in and out via our app with timestamped photos. You receive a before-and-after album within 30 minutes of completion. Payment only processes after you confirm the work.' },
+  ];
+  return (
+    <section id="promise" className="py-24 md:py-32 px-6 md:px-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-16 max-w-3xl">
+          <div className="flex items-center gap-3 mb-4">
+            <SerifNum n={4}/>
+            <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-[0.3em] opacity-60">
+              Honest Answers
+            </span>
+          </div>
+          <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+              className="text-4xl md:text-6xl leading-[0.95]">
+            The questions you'd ask<br/>
+            <em style={{ fontWeight: 300, color: COLORS.terra }}>if you were being honest.</em>
+          </h2>
+        </div>
+        <div className="space-y-4">
+          {fears.map((f, i) => <FearCard key={i} fear={f.fear} answer={f.answer} idx={i}/>)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FearCard({ fear, answer, idx }) {
+  const [open, setOpen] = useState(idx === 0);
+  return (
+    <div className="border transition-all"
+         style={{ borderColor: open ? COLORS.ink : COLORS.line,
+                  backgroundColor: open ? COLORS.paper : 'transparent' }}>
+      <button onClick={() => setOpen(!open)}
+              className="w-full flex items-center justify-between gap-6 p-6 md:p-8 text-left">
+        <div className="flex items-baseline gap-6">
+          <SerifNum n={idx + 1}/>
+          <span style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.01em' }}
+                className="text-xl md:text-2xl">
+            {fear}
+          </span>
+        </div>
+        <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center transition-transform ${open ? 'rotate-45' : ''}`}
+             style={{ border: `1px solid ${COLORS.ink}` }}>
+          <span className="text-xl leading-none">+</span>
+        </div>
+      </button>
+      {open && (
+        <div className="px-6 md:px-8 pb-8 pl-16 md:pl-24 max-w-4xl">
+          <p className="text-base md:text-lg leading-relaxed opacity-80" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            {answer}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   TESTIMONIALS
+   ========================================================= */
+function Testimonials() {
+  const reviews = [
+    { quote: 'I spent six months interviewing services after my previous cleaner disappeared with an heirloom. The Hearth team had me fill out a questionnaire about the things that mattered most in my home before they even gave me a quote. That call told me everything.',
+      name: 'Priya S.', role: 'Brownstone owner, Brooklyn' },
+    { quote: 'We run a pediatric practice. The bar for cleanliness and trust is impossibly high — parents notice every fingerprint. Hearth has been our cleaning team for four years. Same two people, every Tuesday night. That consistency is the whole thing.',
+      name: 'Dr. Marcus Wen', role: 'Practice owner' },
+    { quote: "First newborn. Exhausted. Terrified of having anyone in the house. They sent me photos and bios of my team three days before, walked me through exactly what they'd do, and let me be in another room the whole time. I cried. It was the first clean home I'd seen in eight weeks.",
+      name: 'Jules M.', role: 'New parent' },
+  ];
+  return (
+    <section id="reviews" className="py-24 md:py-32 px-6 md:px-10"
+             style={{ backgroundColor: COLORS.paper, borderTop: `1px solid ${COLORS.line}`, borderBottom: `1px solid ${COLORS.line}` }}>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 mb-4">
+          <SerifNum n={5}/>
+          <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-[0.3em] opacity-60">
+            In Their Words
+          </span>
+        </div>
+        <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+            className="text-4xl md:text-6xl mb-16 max-w-3xl leading-[0.95]">
+          The moment clients remember.
+        </h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {reviews.map((r, i) => (
+            <div key={i} className="p-8 border flex flex-col"
+                 style={{ borderColor: COLORS.line, backgroundColor: COLORS.bg }}>
+              <div className="flex gap-1 mb-6">
+                {[...Array(5)].map((_, j) => (
+                  <Star key={j} size={14} fill={COLORS.terra} color={COLORS.terra}/>
+                ))}
+              </div>
+              <blockquote style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.01em' }}
+                          className="text-lg leading-relaxed mb-6 flex-1">
+                "{r.quote}"
+              </blockquote>
+              <div className="pt-4 border-t" style={{ borderColor: COLORS.line }}>
+                <div style={{ fontFamily: 'Manrope, sans-serif' }} className="font-medium text-sm">{r.name}</div>
+                <div style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-widest opacity-60 mt-1">
+                  {r.role}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   FINAL CTA
+   ========================================================= */
+function FinalCTA({ onBook }) {
+  return (
+    <section className="py-24 md:py-32 px-6 md:px-10" style={{ backgroundColor: COLORS.ink, color: COLORS.bg }}>
+      <div className="max-w-5xl mx-auto text-center">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="h-px w-12" style={{ backgroundColor: COLORS.bg, opacity: 0.4 }}/>
+          <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-xs uppercase tracking-[0.3em] opacity-70">
+            Next Available Slot: Tomorrow
+          </span>
+          <div className="h-px w-12" style={{ backgroundColor: COLORS.bg, opacity: 0.4 }}/>
+        </div>
+        <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.03em' }}
+            className="text-5xl md:text-7xl lg:text-8xl leading-[0.95] mb-10">
+          Reclaim your<br/>
+          <em style={{ fontWeight: 300, color: COLORS.terra }}>weekends.</em>
+        </h2>
+        <p className="text-lg md:text-xl max-w-2xl mx-auto opacity-80 mb-10 leading-relaxed"
+           style={{ fontFamily: 'Manrope, sans-serif' }}>
+          Two minutes to book. Two hours for us to transform your space.
+          Fully vetted, fully insured, fully guaranteed.
+        </p>
+        <button onClick={onBook}
+                className="group px-10 py-5 text-sm font-medium transition-all inline-flex items-center gap-3"
+                style={{ backgroundColor: COLORS.terra, color: COLORS.paper,
+                         fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+          SCHEDULE YOUR CLEANING
+          <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
+        </button>
+        <div className="mt-6 text-xs uppercase tracking-widest opacity-50" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          No charge until your clean is complete · Cancel up to 24 hrs before
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+function Footer() {
+  return (
+    <footer className="py-16 px-6 md:px-10" style={{ backgroundColor: COLORS.bg, borderTop: `1px solid ${COLORS.line}` }}>
+      <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-10">
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.forest }}>
+              <Feather size={16} color={COLORS.bg}/>
+            </div>
+            <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500, letterSpacing: '-0.02em' }} className="text-xl">
+              Hearth & Order
+            </div>
+          </div>
+          <p className="max-w-sm opacity-70 text-sm leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            A cleaning company built on one idea: the people in your home should be the kind of people you'd invite to dinner.
+          </p>
+        </div>
+        <div style={{ fontFamily: 'Manrope, sans-serif' }}>
+          <div className="text-xs uppercase tracking-widest opacity-60 mb-4">Contact</div>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2"><Phone size={14}/> (410) 555-0142</div>
+            <div className="flex items-center gap-2"><Mail size={14}/> hello@hearthandorder.co</div>
+            <div className="flex items-center gap-2"><MapPin size={14}/> Serving the greater metro area</div>
+          </div>
+        </div>
+        <div style={{ fontFamily: 'Manrope, sans-serif' }}>
+          <div className="text-xs uppercase tracking-widest opacity-60 mb-4">Company</div>
+          <div className="space-y-2 text-sm opacity-80">
+            <div>About</div>
+            <div>Careers (we hire carefully)</div>
+            <div>Press</div>
+            <div>Privacy & Terms</div>
+          </div>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto mt-12 pt-6 border-t flex flex-wrap justify-between items-center text-xs opacity-60"
+           style={{ borderColor: COLORS.line, fontFamily: 'Manrope, sans-serif' }}>
+        <span>© 2026 Hearth & Order Cleaning Co.</span>
+        <span>Licensed · Bonded · Insured</span>
+      </div>
+    </footer>
+  );
+}
+
+/* =========================================================
+   BOOKING MODAL
+   ========================================================= */
+function BookingModal({ open, onClose }) {
+  const [step, setStep] = useState(0);
+  const [state, setState] = useState({
+    serviceType: 'home', packageId: 'deep', addons: [],
+    date: null, timeWindow: null,
+    subscription: null, discountOffered: false, discountAccepted: false,
+    contact: { name: '', phone: '', email: '' },
+    address: { street: '', unit: '', city: '', state: 'MD', zip: '' },
+    notes: '',
+    card: { number: '', exp: '', cvc: '', name: '', zip: '' },
+  });
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setStep(0);
+      setProcessing(false);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  const pkg = useMemo(() =>
+    PACKAGES[state.serviceType].find(p => p.id === state.packageId) || PACKAGES[state.serviceType][1]
+  , [state.serviceType, state.packageId]);
+
+  const pricing = useMemo(() => {
+    const base = pkg.price;
+    const addons = state.addons.reduce((s, id) => s + (ADDONS.find(a => a.id === id)?.price || 0), 0);
+    const subtotal = base + addons;
+    let discount = 0;
+    if (state.subscription) {
+      const s = SUBSCRIPTIONS.find(x => x.id === state.subscription);
+      if (s) discount = (subtotal * s.discount) / 100;
+    } else if (state.discountAccepted) {
+      discount = subtotal * 0.10;
+    }
+    const tax = (subtotal - discount) * 0.06;
+    const total = subtotal - discount + tax;
+    return { base, addons, subtotal, discount, tax, total };
+  }, [pkg, state.addons, state.subscription, state.discountAccepted]);
+
+  const update = (partial) => setState(s => ({ ...s, ...partial }));
+  if (!open) return null;
+
+  const steps = [
+    { n: 0, label: 'Service' },
+    { n: 1, label: 'Date & Time' },
+    { n: 2, label: 'Recurring' },
+    { n: 3, label: 'Details' },
+    { n: 4, label: 'Payment' },
+    { n: 5, label: 'Confirmed' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ backgroundColor: COLORS.bg }}>
+      <div className="sticky top-0 z-10 border-b" style={{ borderColor: COLORS.line, backgroundColor: COLORS.bg }}>
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.forest }}>
+              <Feather size={14} color={COLORS.bg}/>
+            </div>
+            <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-lg">
+              Book your cleaning
+            </div>
+          </div>
+          <button onClick={onClose}
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-60 transition"
+                  style={{ border: `1px solid ${COLORS.ink}` }}>
+            <X size={18}/>
+          </button>
+        </div>
+        <div className="max-w-6xl mx-auto px-6 pb-5">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {steps.map((s, i) => (
+              <div key={i} className="flex items-center gap-2 flex-shrink-0">
+                <div className={`flex items-center gap-2 transition-opacity ${step >= i ? 'opacity-100' : 'opacity-40'}`}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px]"
+                       style={{ backgroundColor: step >= i ? COLORS.ink : 'transparent',
+                                color: step >= i ? COLORS.bg : COLORS.ink,
+                                border: `1px solid ${COLORS.ink}`,
+                                fontFamily: 'Manrope, sans-serif' }}>
+                    {step > i ? <Check size={12}/> : i + 1}
+                  </div>
+                  <span className="text-xs uppercase tracking-widest hidden sm:inline" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    {s.label}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div className="w-6 md:w-12 h-px" style={{ backgroundColor: COLORS.ink, opacity: step > i ? 1 : 0.2 }}/>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-10 md:py-14 pb-32">
+        {step === 0 && <StepService state={state} update={update}/>}
+        {step === 1 && <StepDateTime state={state} update={update}/>}
+        {step === 2 && <StepSubscription state={state} update={update} setStep={setStep}/>}
+        {step === 3 && <StepDetails state={state} update={update}/>}
+        {step === 4 && <StepPayment state={state} update={update} pricing={pricing} pkg={pkg}
+                                    processing={processing} setProcessing={setProcessing}
+                                    onComplete={() => setStep(5)}/>}
+        {step === 5 && <StepConfirmation state={state} pricing={pricing} pkg={pkg} onClose={onClose}/>}
+      </div>
+
+      {step < 5 && step !== 4 && (
+        <div className="fixed bottom-0 inset-x-0 border-t" style={{ borderColor: COLORS.line, backgroundColor: COLORS.bg }}>
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              {step > 0 && (
+                <button onClick={() => setStep(step - 1)}
+                        className="flex items-center gap-2 text-sm hover:opacity-60 transition"
+                        style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  <ChevronLeft size={16}/> Back
+                </button>
+              )}
+              <div className="hidden md:flex items-baseline gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                <span className="text-xs uppercase tracking-widest opacity-60">Running total</span>
+                <span style={{ fontFamily: 'Fraunces, serif' }} className="text-xl">${pricing.total.toFixed(2)}</span>
+              </div>
+            </div>
+            <button onClick={() => setStep(step + 1)}
+                    disabled={
+                      (step === 1 && (!state.date || !state.timeWindow)) ||
+                      (step === 3 && (!state.contact.name || !state.contact.email || !state.contact.phone || !state.address.street || !state.address.city || !state.address.zip))
+                    }
+                    className="flex items-center gap-2 px-8 py-4 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: COLORS.ink, color: COLORS.bg,
+                             fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+              {step === 3 ? 'TO PAYMENT' : 'CONTINUE'}
+              <ArrowRight size={14}/>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- Step 0 ---- */
+function StepService({ state, update }) {
+  const pkgs = PACKAGES[state.serviceType];
+  const toggleAddon = (id) => {
+    const has = state.addons.includes(id);
+    update({ addons: has ? state.addons.filter(a => a !== id) : [...state.addons, id] });
+  };
+  return (
+    <div>
+      <StepHeader num={1} title="What are we cleaning?" sub="Start with the basics — you'll be able to add any specialty requests next."/>
+      <div className="mb-10">
+        <Label>Property type</Label>
+        <div className="grid grid-cols-2 gap-4 max-w-xl">
+          {[{ id: 'home', label: 'Home', icon: HomeIcon, sub: 'Apartments, condos, houses' },
+            { id: 'business', label: 'Business', icon: Building2, sub: 'Offices, retail, studios' }].map(t => {
+            const IconC = t.icon;
+            const active = state.serviceType === t.id;
+            return (
+              <button key={t.id}
+                      onClick={() => update({ serviceType: t.id, packageId: 'deep' })}
+                      className="p-6 text-left transition-all"
+                      style={{ border: `1px solid ${active ? COLORS.ink : COLORS.line}`,
+                               backgroundColor: active ? COLORS.ink : COLORS.paper,
+                               color: active ? COLORS.bg : COLORS.ink }}>
+                <IconC size={24} className="mb-3"/>
+                <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-xl mb-1">{t.label}</div>
+                <div className="text-xs opacity-70" style={{ fontFamily: 'Manrope, sans-serif' }}>{t.sub}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-10">
+        <Label>Choose your package</Label>
+        <div className="grid md:grid-cols-3 gap-4">
+          {pkgs.map(p => {
+            const active = state.packageId === p.id;
+            return (
+              <button key={p.id}
+                      onClick={() => update({ packageId: p.id })}
+                      className="p-6 text-left transition-all relative"
+                      style={{ border: `1px solid ${active ? COLORS.forest : COLORS.line}`,
+                               backgroundColor: active ? COLORS.forest : COLORS.paper,
+                               color: active ? COLORS.bg : COLORS.ink }}>
+                {p.popular && (
+                  <div className="absolute -top-2 left-4 px-2 py-0.5 text-[9px] uppercase tracking-widest"
+                       style={{ backgroundColor: COLORS.terra, color: COLORS.paper, fontFamily: 'Manrope, sans-serif' }}>
+                    Most chosen
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline mb-2">
+                  <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-2xl">{p.name}</div>
+                  <div style={{ fontFamily: 'Fraunces, serif' }} className="text-xl">${p.price}</div>
+                </div>
+                <div className="text-xs uppercase tracking-widest opacity-70 mb-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {p.duration}
+                </div>
+                <p className="text-sm italic opacity-80" style={{ fontFamily: 'Fraunces, serif' }}>"{p.tagline}"</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <Label>Add-ons <span className="opacity-60 normal-case font-normal">(optional)</span></Label>
+        <div className="grid md:grid-cols-2 gap-3 max-w-3xl">
+          {ADDONS.map(a => {
+            const active = state.addons.includes(a.id);
+            return (
+              <button key={a.id}
+                      onClick={() => toggleAddon(a.id)}
+                      className="flex items-center justify-between p-4 text-left transition-all"
+                      style={{ border: `1px solid ${active ? COLORS.terra : COLORS.line}`,
+                               backgroundColor: active ? COLORS.terra : 'transparent',
+                               color: active ? COLORS.paper : COLORS.ink }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 flex items-center justify-center"
+                       style={{ border: `1px solid ${active ? COLORS.paper : COLORS.ink}` }}>
+                    {active && <Check size={12}/>}
+                  </div>
+                  <span style={{ fontFamily: 'Manrope, sans-serif' }} className="text-sm">{a.label}</span>
+                </div>
+                <span style={{ fontFamily: 'Fraunces, serif' }}>+${a.price}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Step 1 ---- */
+function StepDateTime({ state, update }) {
+  const days = useMemo(() => {
+    const arr = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 1; i <= 21; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      arr.push(d);
+    }
+    return arr;
+  }, []);
+  const fmtDay = d => d.toLocaleDateString('en-US', { weekday: 'short' });
+  const fmtDate = d => d.getDate();
+  const fmtMonth = d => d.toLocaleDateString('en-US', { month: 'short' });
+  const isoDate = d => d.toISOString().split('T')[0];
+
+  return (
+    <div>
+      <StepHeader num={2} title="When should we arrive?" sub="Pick any available date in the next 3 weeks and a 2-hour arrival window. Need sooner? Call us — we often squeeze in next-day jobs."/>
+      <div className="mb-10">
+        <Label>Choose a date</Label>
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 max-w-4xl">
+          {days.map((d, i) => {
+            const iso = isoDate(d);
+            const active = state.date === iso;
+            return (
+              <button key={i}
+                      onClick={() => update({ date: iso })}
+                      className="p-3 text-center transition-all"
+                      style={{ border: `1px solid ${active ? COLORS.ink : COLORS.line}`,
+                               backgroundColor: active ? COLORS.ink : COLORS.paper,
+                               color: active ? COLORS.bg : COLORS.ink }}>
+                <div className="text-[10px] uppercase tracking-widest opacity-70" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {fmtDay(d)}
+                </div>
+                <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 400 }} className="text-2xl leading-none my-1">
+                  {fmtDate(d)}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest opacity-70" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {fmtMonth(d)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {state.date && (
+        <div>
+          <Label>Choose your 2-hour arrival window</Label>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl">
+            {TIME_WINDOWS.map(w => {
+              const active = state.timeWindow === w.id;
+              return (
+                <button key={w.id}
+                        onClick={() => update({ timeWindow: w.id })}
+                        className="flex items-center justify-between p-4 transition-all"
+                        style={{ border: `1px solid ${active ? COLORS.ink : COLORS.line}`,
+                                 backgroundColor: active ? COLORS.ink : COLORS.paper,
+                                 color: active ? COLORS.bg : COLORS.ink }}>
+                  <div className="flex items-center gap-3">
+                    <Clock size={16}/>
+                    <span style={{ fontFamily: 'Manrope, sans-serif' }}>{w.label}</span>
+                  </div>
+                  {active && <Check size={16}/>}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-xs opacity-60 max-w-xl" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Your team will text you 30 minutes before arrival with ETA, photos, and brief bios.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- Step 2 ---- */
+function StepSubscription({ state, update, setStep }) {
+  const declined = state.subscription === null && state.discountOffered;
+  if (!declined) {
+    return (
+      <div>
+        <StepHeader num={3} title="Make this effortless."
+                    sub="Most of our clients put their cleanings on a schedule. Same team, same day, pre-discounted — and you can pause or cancel anytime."/>
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          {SUBSCRIPTIONS.map(s => {
+            const active = state.subscription === s.id;
+            return (
+              <button key={s.id}
+                      onClick={() => update({ subscription: s.id })}
+                      className="p-6 text-left transition-all relative"
+                      style={{ border: `1px solid ${active ? COLORS.forest : COLORS.line}`,
+                               backgroundColor: active ? COLORS.forest : COLORS.paper,
+                               color: active ? COLORS.bg : COLORS.ink }}>
+                {s.id === 'biweekly' && (
+                  <div className="absolute -top-2 left-4 px-2 py-0.5 text-[9px] uppercase tracking-widest"
+                       style={{ backgroundColor: COLORS.terra, color: COLORS.paper, fontFamily: 'Manrope, sans-serif' }}>
+                    Best Value
+                  </div>
+                )}
+                <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-2xl mb-1">{s.label}</div>
+                <div className="text-3xl mb-2"
+                     style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, color: COLORS.terra }}>
+                  −{s.discount}%
+                </div>
+                <p className="text-sm opacity-80" style={{ fontFamily: 'Manrope, sans-serif' }}>{s.sub}</p>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap items-center gap-6">
+          <button onClick={() => setStep(3)}
+                  disabled={!state.subscription}
+                  className="px-8 py-4 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: COLORS.ink, color: COLORS.bg,
+                           fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+            LOCK IN MY DISCOUNT →
+          </button>
+          <button onClick={() => update({ subscription: null, discountOffered: true })}
+                  className="text-sm underline underline-offset-4 opacity-60 hover:opacity-100 transition"
+                  style={{ fontFamily: 'Manrope, sans-serif' }}>
+            One-time clean only →
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="mb-8 p-6 border-l-4" style={{ borderColor: COLORS.terra, backgroundColor: COLORS.paper }}>
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles size={16} style={{ color: COLORS.terra }}/>
+          <span className="text-xs uppercase tracking-widest" style={{ fontFamily: 'Manrope, sans-serif', color: COLORS.terra }}>
+            Wait — one more offer
+          </span>
+        </div>
+        <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.02em' }}
+            className="text-3xl md:text-4xl mb-3 leading-tight">
+          Try us once, risk-free: <em style={{ color: COLORS.terra }}>10% off your first clean.</em>
+        </h3>
+        <p className="opacity-80 mb-6 max-w-2xl" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          No subscription required. Just a one-time discount so you can see our work without committing.
+          If you love it, you can add a plan any time — same discount rates, guaranteed.
+        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <button onClick={() => { update({ discountAccepted: true }); setStep(3); }}
+                  className="px-8 py-4 text-sm font-medium transition-all flex items-center gap-2"
+                  style={{ backgroundColor: COLORS.terra, color: COLORS.paper,
+                           fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+            YES, APPLY MY 10% OFF
+            <ArrowRight size={14}/>
+          </button>
+          <button onClick={() => { update({ discountAccepted: false }); setStep(3); }}
+                  className="text-sm underline underline-offset-4 opacity-60 hover:opacity-100 transition"
+                  style={{ fontFamily: 'Manrope, sans-serif' }}>
+            No thanks, full price →
+          </button>
+        </div>
+      </div>
+      <div className="text-xs opacity-60 max-w-xl" style={{ fontFamily: 'Manrope, sans-serif' }}>
+        You can always add a recurring plan after your first clean from your account dashboard.
+      </div>
+    </div>
+  );
+}
+
+/* ---- Step 3 ---- */
+function StepDetails({ state, update }) {
+  const setContact = (k, v) => update({ contact: { ...state.contact, [k]: v } });
+  const setAddress = (k, v) => update({ address: { ...state.address, [k]: v } });
+  return (
+    <div>
+      <StepHeader num={4} title="Where and who?"
+                  sub="Everything here stays private. We'll text arrival updates and send photos to the numbers and emails you provide."/>
+      <div className="grid md:grid-cols-2 gap-10 max-w-4xl">
+        <div>
+          <Label>Contact</Label>
+          <div className="space-y-3">
+            <Input placeholder="Full name"    value={state.contact.name}  onChange={v => setContact('name', v)}/>
+            <Input placeholder="Phone number" value={state.contact.phone} onChange={v => setContact('phone', v)}/>
+            <Input placeholder="Email address" value={state.contact.email} onChange={v => setContact('email', v)}/>
+          </div>
+        </div>
+        <div>
+          <Label>Service address</Label>
+          <div className="space-y-3">
+            <Input placeholder="Street address"      value={state.address.street} onChange={v => setAddress('street', v)}/>
+            <Input placeholder="Apt / Unit (optional)" value={state.address.unit}  onChange={v => setAddress('unit', v)}/>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <Input placeholder="City" value={state.address.city} onChange={v => setAddress('city', v)}/>
+              </div>
+              <Input placeholder="ZIP" value={state.address.zip} onChange={v => setAddress('zip', v)}/>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-10 max-w-4xl">
+        <Label>Anything we should know? <span className="opacity-60 normal-case font-normal">(optional)</span></Label>
+        <textarea value={state.notes} onChange={e => update({ notes: e.target.value })} rows={4}
+                  placeholder="Pet in the home, alarm code, preferred products, areas to avoid, fragile items…"
+                  className="w-full p-4 outline-none transition"
+                  style={{ border: `1px solid ${COLORS.line}`, backgroundColor: COLORS.paper,
+                           fontFamily: 'Manrope, sans-serif', resize: 'vertical' }}/>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Step 4 ---- */
+function StepPayment({ state, update, pricing, pkg, processing, setProcessing, onComplete }) {
+  const setCard = (k, v) => update({ card: { ...state.card, [k]: v } });
+  const handleSubmit = () => {
+    setProcessing(true);
+    setTimeout(() => { setProcessing(false); onComplete(); }, 2200);
+  };
+  const prettyDate = state.date
+    ? new Date(state.date + 'T12:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    : '';
+  const windowLabel = TIME_WINDOWS.find(w => w.id === state.timeWindow)?.label || '';
+  return (
+    <div>
+      <StepHeader num={5} title="Review & authorize"
+                  sub="We'll authorize your card today, but you won't be charged until your cleaning is marked complete by your team lead."/>
+      <div className="grid md:grid-cols-5 gap-10">
+        <div className="md:col-span-2 p-6 order-2 md:order-1"
+             style={{ backgroundColor: COLORS.paper, border: `1px solid ${COLORS.line}` }}>
+          <div className="text-xs uppercase tracking-widest opacity-60 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Order summary
+          </div>
+          <div className="pb-4 mb-4 border-b" style={{ borderColor: COLORS.line }}>
+            <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-xl">{pkg.name}</div>
+            <div className="text-sm opacity-70" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              {state.serviceType === 'home' ? 'Home' : 'Business'} · {pkg.duration}
+            </div>
+          </div>
+          <div className="space-y-2 text-sm mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            <div className="flex items-center gap-2"><Calendar size={14}/> {prettyDate}</div>
+            <div className="flex items-center gap-2"><Clock size={14}/> {windowLabel}</div>
+            <div className="flex items-start gap-2">
+              <MapPin size={14} className="mt-0.5"/>
+              <span>{state.address.street}{state.address.unit ? `, ${state.address.unit}` : ''}, {state.address.city}</span>
+            </div>
+            {state.subscription && (
+              <div className="flex items-center gap-2">
+                <RefreshCw size={14}/>
+                {SUBSCRIPTIONS.find(s => s.id === state.subscription)?.label} recurring
+              </div>
+            )}
+          </div>
+          <div className="space-y-2 text-sm pt-4 border-t"
+               style={{ borderColor: COLORS.line, fontFamily: 'Manrope, sans-serif' }}>
+            <Row label={pkg.name} value={`$${pricing.base.toFixed(2)}`}/>
+            {state.addons.map(id => {
+              const a = ADDONS.find(x => x.id === id);
+              return <Row key={id} label={a.label} value={`+$${a.price.toFixed(2)}`}/>;
+            })}
+            {pricing.discount > 0 && (
+              <Row label={state.subscription ? 'Subscription discount' : 'First-time discount'}
+                   value={`−$${pricing.discount.toFixed(2)}`} color={COLORS.terra}/>
+            )}
+            <Row label="Tax" value={`$${pricing.tax.toFixed(2)}`} muted/>
+            <div className="pt-3 mt-3 border-t flex items-baseline justify-between" style={{ borderColor: COLORS.line }}>
+              <span className="text-sm uppercase tracking-widest">Total</span>
+              <span style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-3xl">
+                ${pricing.total.toFixed(2)}
+              </span>
+            </div>
+          </div>
+          <div className="mt-5 p-3 text-xs flex items-start gap-2 opacity-80"
+               style={{ backgroundColor: COLORS.bg, fontFamily: 'Manrope, sans-serif' }}>
+            <Lock size={12} className="mt-0.5 flex-shrink-0"/>
+            <span>Card authorized today. Charged only after your team lead marks the clean complete.</span>
+          </div>
+        </div>
+        <div className="md:col-span-3 order-1 md:order-2">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-1.5 px-3 py-1.5"
+                 style={{ backgroundColor: COLORS.ink, color: COLORS.bg, fontFamily: 'Manrope, sans-serif' }}>
+              <Lock size={12}/>
+              <span className="text-xs uppercase tracking-widest">Secure · Stripe</span>
+            </div>
+            <div className="text-xs opacity-60" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              256-bit TLS · PCI-DSS compliant
+            </div>
+          </div>
+          <Label>Payment details</Label>
+          <div className="space-y-3 max-w-md">
+            <Input placeholder="Name on card" value={state.card.name} onChange={v => setCard('name', v)}/>
+            <div className="relative">
+              <Input placeholder="1234 1234 1234 1234" value={state.card.number}
+                     onChange={v => setCard('number', v.replace(/[^0-9 ]/g, '').slice(0, 19))}/>
+              <CreditCard size={18} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40"/>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input placeholder="MM / YY" value={state.card.exp}
+                     onChange={v => setCard('exp', v.replace(/[^0-9 /]/g, '').slice(0, 7))}/>
+              <Input placeholder="CVC" value={state.card.cvc}
+                     onChange={v => setCard('cvc', v.replace(/[^0-9]/g, '').slice(0, 4))}/>
+            </div>
+            <Input placeholder="Billing ZIP" value={state.card.zip}
+                   onChange={v => setCard('zip', v.replace(/[^0-9]/g, '').slice(0, 5))}/>
+          </div>
+          <button onClick={handleSubmit}
+                  disabled={processing || !state.card.name || !state.card.number || !state.card.exp || !state.card.cvc || !state.card.zip}
+                  className="mt-8 w-full max-w-md flex items-center justify-center gap-3 px-8 py-5 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: COLORS.terra, color: COLORS.paper,
+                           fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+            {processing ? (
+              <><RefreshCw size={14} className="animate-spin"/> AUTHORIZING WITH STRIPE...</>
+            ) : (
+              <><Lock size={14}/> AUTHORIZE ${pricing.total.toFixed(2)}</>
+            )}
+          </button>
+          <div className="mt-6 text-xs opacity-60 max-w-md" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            By authorizing, you agree to our Service Terms. You can cancel up to 24 hours before your
+            scheduled window at no charge. Your card is not charged until the work is completed.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Step 5 ---- */
+function StepConfirmation({ state, onClose }) {
+  const prettyDate = state.date
+    ? new Date(state.date + 'T12:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    : '';
+  const windowLabel = TIME_WINDOWS.find(w => w.id === state.timeWindow)?.label || '';
+  return (
+    <div className="max-w-3xl mx-auto text-center py-10">
+      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-8" style={{ backgroundColor: COLORS.forest }}>
+        <Check size={32} color={COLORS.bg}/>
+      </div>
+      <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="h-px w-8" style={{ backgroundColor: COLORS.ink }}/>
+        <span className="text-xs uppercase tracking-[0.3em] opacity-70" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          You're booked
+        </span>
+        <div className="h-px w-8" style={{ backgroundColor: COLORS.ink }}/>
+      </div>
+      <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+          className="text-4xl md:text-6xl leading-[1] mb-6">
+        See you on<br/><em style={{ color: COLORS.terra }}>{prettyDate}.</em>
+      </h2>
+      <p className="text-lg opacity-80 mb-10 max-w-xl mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
+        A confirmation is on its way to <strong>{state.contact.email}</strong>.
+        You'll get a full team dossier — names, photos, years of service — 24 hours before arrival.
+      </p>
+      <div className="grid md:grid-cols-3 gap-4 mb-12 text-left">
+        <ConfirmCell icon={Calendar} label="Date" value={prettyDate}/>
+        <ConfirmCell icon={Clock} label="Arrival window" value={windowLabel}/>
+        <ConfirmCell icon={MapPin} label="Address" value={`${state.address.street}, ${state.address.city}`}/>
+      </div>
+      <div className="p-6 text-left mb-8" style={{ backgroundColor: COLORS.paper, border: `1px solid ${COLORS.line}` }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Shield size={16} style={{ color: COLORS.forest }}/>
+          <span className="text-xs uppercase tracking-widest" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            What happens next
+          </span>
+        </div>
+        <ol className="space-y-2 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          <li><strong>Within 1 hour:</strong> Email confirmation with booking details.</li>
+          <li><strong>24 hours before:</strong> Your team's bios, photos, certifications, and tenure.</li>
+          <li><strong>30 mins before:</strong> Live ETA text message.</li>
+          <li><strong>After the clean:</strong> Before/after photo album. Your card is charged <em>only</em> once you confirm the work.</li>
+        </ol>
+      </div>
+      <button onClick={onClose}
+              className="px-8 py-4 text-sm font-medium transition-all inline-flex items-center gap-2"
+              style={{ backgroundColor: COLORS.ink, color: COLORS.bg,
+                       fontFamily: 'Manrope, sans-serif', letterSpacing: '0.05em' }}>
+        BACK TO HOME
+      </button>
+    </div>
+  );
+}
+
+/* ---- Small shared ---- */
+function StepHeader({ num, title, sub }) {
+  return (
+    <div className="mb-10 max-w-3xl">
+      <div className="flex items-center gap-3 mb-3">
+        <SerifNum n={num}/>
+        <span className="text-xs uppercase tracking-[0.3em] opacity-60" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          Step {num} of 5
+        </span>
+      </div>
+      <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+          className="text-3xl md:text-5xl leading-tight mb-4">
+        {title}
+      </h2>
+      <p className="text-base md:text-lg opacity-70 max-w-2xl" style={{ fontFamily: 'Manrope, sans-serif' }}>
+        {sub}
+      </p>
+    </div>
+  );
+}
+function Label({ children }) {
+  return (
+    <div className="text-xs uppercase tracking-[0.3em] opacity-60 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+      {children}
+    </div>
+  );
+}
+function Input({ placeholder, value, onChange }) {
+  return (
+    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+           className="w-full px-4 py-3.5 transition"
+           style={{ border: `1px solid ${COLORS.line}`, backgroundColor: COLORS.paper, fontFamily: 'Manrope, sans-serif' }}/>
+  );
+}
+function Row({ label, value, color, muted }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <span className={muted ? 'opacity-60' : ''}>{label}</span>
+      <span style={{ color }} className={muted ? 'opacity-60' : ''}>{value}</span>
+    </div>
+  );
+}
+function ConfirmCell({ icon: IconC, label, value }) {
+  return (
+    <div className="p-4" style={{ border: `1px solid ${COLORS.line}`, backgroundColor: COLORS.paper }}>
+      <div className="flex items-center gap-2 mb-2 text-xs uppercase tracking-widest opacity-60" style={{ fontFamily: 'Manrope, sans-serif' }}>
+        <IconC size={12}/> {label}
+      </div>
+      <div className="text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>{value}</div>
+    </div>
+  );
+}
+
+/* =========================================================
+   SHARED: Page header used across all sub-pages
+   ========================================================= */
+function PageHeader({ eyebrow, title, sub, align = 'left' }) {
+  const center = align === 'center';
+  return (
+    <section className={`pt-40 pb-16 md:pt-48 md:pb-20 px-6 md:px-10 ${center ? 'text-center' : ''}`}>
+      <div className={`max-w-5xl ${center ? 'mx-auto' : ''}`}>
+        <div className={`flex items-center gap-3 mb-6 ${center ? 'justify-center' : ''}`}>
+          <div className="h-px w-12" style={{ backgroundColor: COLORS.ink }} />
+          <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                className="text-xs uppercase tracking-[0.3em] opacity-70">
+            {eyebrow}
+          </span>
+          {center && <div className="h-px w-12" style={{ backgroundColor: COLORS.ink }} />}
+        </div>
+        <h1 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 0.95 }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-[7rem]">
+          {title}
+        </h1>
+        {sub && (
+          <p className={`mt-8 text-lg md:text-xl opacity-80 max-w-2xl leading-relaxed ${center ? 'mx-auto' : ''}`}
+             style={{ fontFamily: 'Manrope, sans-serif' }}>
+            {sub}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   OUR CLEANERS PAGE — the star of the show
+   ========================================================= */
+const CLEANERS = [
+  {
+    name: 'Marisol V.',
+    role: 'Senior Team Lead',
+    tenure: 7,
+    initials: 'MV',
+    avatarA: '#c66b3d', avatarB: '#a8542d',
+    specialties: ['Kitchens & deep-cleans', 'Training new hires'],
+    certifications: ['IICRC Certified', 'Green Seal Professional'],
+    quote: "I treat every kitchen like my grandmother's. If she wouldn't eat off it, I don't leave.",
+    review: '"Marisol has been cleaning our home for four years. She knows which drawer the good silverware lives in." — Kate B., repeat client',
+  },
+  {
+    name: 'David K.',
+    role: 'Team Lead',
+    tenure: 5,
+    initials: 'DK',
+    avatarA: '#1a3a2e', avatarB: '#0f2a20',
+    specialties: ['Post-renovation', 'Hardwood restoration'],
+    certifications: ['OSHA 10', 'Dust-containment trained'],
+    quote: "A renovation leaves sawdust in places you can't imagine. Finding it is half the job.",
+    review: '"They cleaned our house after a full gut-reno. I\'ve never seen drywall dust disappear so completely." — Alec P.',
+  },
+  {
+    name: 'Amara O.',
+    role: 'Cleaner',
+    tenure: 4,
+    initials: 'AO',
+    avatarA: '#2d5a44', avatarB: '#1a3a2e',
+    specialties: ['Allergen-sensitive homes', 'Non-toxic protocols'],
+    certifications: ['HEPA-certified', 'Fragrance-free trained'],
+    quote: 'I grew up with terrible allergies. I know how a home has to feel to be truly safe.',
+    review: '"Our son has severe asthma. Amara understood before I finished explaining. He hasn\'t had an attack since she started." — Dr. R. Okafor',
+  },
+  {
+    name: 'James T.',
+    role: 'Commercial Lead',
+    tenure: 3,
+    initials: 'JT',
+    avatarA: '#c66b3d', avatarB: '#8f4625',
+    specialties: ['Medical offices', 'After-hours commercial'],
+    certifications: ['CIMS-GB', 'Bloodborne pathogen trained'],
+    quote: 'Medical spaces have rules. My job is to make sure those rules are invisible to your patients.',
+    review: '"Our patient satisfaction scores went up after we switched. That\'s not a coincidence." — Clinic Director',
+  },
+  {
+    name: 'Elena R.',
+    role: 'Senior Team Lead',
+    tenure: 6,
+    initials: 'ER',
+    avatarA: '#1a3a2e', avatarB: '#0a2117',
+    specialties: ['Pet households', 'Large estates'],
+    certifications: ['Pet-First Aid certified', 'Natural fiber trained'],
+    quote: 'A house with pets is a house that\'s loved. I just make the love easier to live with.',
+    review: '"Three dogs. Two cats. One Elena. You do the math." — Lauren F.',
+  },
+  {
+    name: 'Michael C.',
+    role: 'Cleaner',
+    tenure: 8,
+    initials: 'MC',
+    avatarA: '#c66b3d', avatarB: '#a8542d',
+    specialties: ['Antiques & art', 'Estate maintenance'],
+    certifications: ['Smithsonian Preservation (short course)', 'Insurance-grade documentation'],
+    quote: 'A 200-year-old piece of wood has rules. I\'ve spent eight years learning them.',
+    review: '"He treats a chipped teacup like a Vermeer. That\'s the standard I was looking for." — Estate client',
+  },
+];
+
+function CleanerAvatar({ initials, a, b }) {
+  return (
+    <div className="relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
+         style={{ background: `linear-gradient(135deg, ${a} 0%, ${b} 100%)` }}>
+      <svg className="absolute inset-0 w-full h-full opacity-30 mix-blend-overlay" xmlns="http://www.w3.org/2000/svg">
+        <filter id={`avNoise-${initials}`}>
+          <feTurbulence type="fractalNoise" baseFrequency="1.8" numOctaves="2" stitchTiles="stitch"/>
+        </filter>
+        <rect width="100%" height="100%" filter={`url(#avNoise-${initials})`}/>
+      </svg>
+      <span style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.02em', color: COLORS.bg }}
+            className="text-2xl relative z-10">
+        {initials}
+      </span>
+    </div>
+  );
+}
+
+function CleanersPage({ onBook, go }) {
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Meet the Team"
+        title={<>The people we trust<br/>with <em style={{ color: COLORS.terra }}>our name.</em></>}
+        sub="Every cleaner here was hired the way you'd hire someone for your own home — slowly, carefully, and only when we were certain. Here's who they are."
+      />
+
+      {/* Stats specific to our team */}
+      <section className="px-6 md:px-10 pb-20">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 p-10 border"
+             style={{ borderColor: COLORS.line, backgroundColor: COLORS.paper }}>
+          {[
+            { n: '3.4 yrs', l: 'Avg. tenure on our team' },
+            { n: '1 in 47',  l: 'Applicants who make it through vetting' },
+            { n: '18 mos',   l: 'Min. apprenticeship before solo work' },
+            { n: '100%',     l: 'Background-checked & bonded' },
+          ].map((s, i) => (
+            <div key={i}>
+              <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                   className="text-4xl md:text-5xl">
+                {s.n}
+              </div>
+              <div style={{ fontFamily: 'Manrope, sans-serif' }}
+                   className="text-xs uppercase tracking-widest opacity-60 mt-2">
+                {s.l}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Cleaner profiles */}
+      <section className="px-6 md:px-10 py-20">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-12 flex items-end justify-between flex-wrap gap-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <SerifNum n={1}/>
+                <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                      className="text-xs uppercase tracking-[0.3em] opacity-60">
+                  Featured Members
+                </span>
+              </div>
+              <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                  className="text-4xl md:text-5xl max-w-2xl leading-[1]">
+                A few of the people<br/>currently on staff.
+              </h2>
+            </div>
+            <p className="max-w-sm opacity-70 text-sm"
+               style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Our full roster is 62 cleaners across 14 teams. After booking, we send you your
+              assigned team's full bios before your first clean.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {CLEANERS.map((c, i) => (
+              <div key={i} className="p-8 border flex flex-col"
+                   style={{ borderColor: COLORS.line, backgroundColor: COLORS.paper }}>
+                <div className="flex items-start gap-5 mb-5">
+                  <CleanerAvatar initials={c.initials} a={c.avatarA} b={c.avatarB}/>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                      <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 500, letterSpacing: '-0.02em' }}
+                          className="text-2xl">
+                        {c.name}
+                      </h3>
+                      <span className="text-xs uppercase tracking-widest opacity-60"
+                            style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        {c.tenure} yrs with us
+                      </span>
+                    </div>
+                    <div className="text-sm mt-1" style={{ fontFamily: 'Manrope, sans-serif', color: COLORS.terra }}>
+                      {c.role}
+                    </div>
+                  </div>
+                </div>
+
+                <blockquote style={{ fontFamily: 'Fraunces, serif', fontWeight: 400 }}
+                            className="text-lg italic opacity-90 mb-5 leading-relaxed">
+                  "{c.quote}"
+                </blockquote>
+
+                <div className="space-y-4 mb-5" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest opacity-60 mb-1.5">Specialties</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.specialties.map((s, j) => (
+                        <span key={j} className="px-2.5 py-1 text-xs"
+                              style={{ border: `1px solid ${COLORS.line}`, backgroundColor: COLORS.bg }}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest opacity-60 mb-1.5">Certifications</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.certifications.map((s, j) => (
+                        <span key={j} className="px-2.5 py-1 text-xs flex items-center gap-1.5"
+                              style={{ backgroundColor: COLORS.forest, color: COLORS.bg }}>
+                          <BadgeCheck size={10}/> {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-auto border-t" style={{ borderColor: COLORS.line }}>
+                  <p className="text-xs opacity-70 leading-relaxed italic"
+                     style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    {c.review}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Our vetting process — expanded version */}
+      <section className="py-24 md:py-32 px-6 md:px-10"
+               style={{ backgroundColor: COLORS.forest, color: COLORS.bg }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-3xl mb-16">
+            <div className="flex items-center gap-3 mb-4">
+              <SerifNum n={2}/>
+              <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                    className="text-xs uppercase tracking-[0.3em] opacity-70">
+                The Vetting Process
+              </span>
+            </div>
+            <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                className="text-4xl md:text-6xl leading-[0.95]">
+              Six stages. Ninety-six percent of applicants never make it past the second.
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-x-12 gap-y-10">
+            {[
+              { step: 'Stage 01', title: 'Application & written test',
+                body: 'We receive roughly 600 applications a year. Every applicant completes a 40-question written assessment covering chemical safety, surface identification, and ethical scenarios. About half move on.' },
+              { step: 'Stage 02', title: 'Seven-layer background check',
+                body: 'Federal, state, and county criminal records; sex offender registry; national wants & warrants; SSN trace; full driving record; and employment history. Performed by a third-party firm and re-run every 12 months.' },
+              { step: 'Stage 03', title: 'Three professional references',
+                body: 'Independently verified — not friends, not family. We call each one personally and ask specific, hard questions. "Would you leave your own mother\'s home in their hands?" is always one of them.' },
+              { step: 'Stage 04', title: 'In-person practical assessment',
+                body: 'Candidates perform a timed clean on a prepared test space while being observed. We score 14 specific criteria, from chemical handling to how they treat personal objects they find on surfaces.' },
+              { step: 'Stage 05', title: '18-month apprenticeship',
+                body: 'Every new hire spends at least 18 months paired with a senior cleaner before ever working a home alone. No exceptions, regardless of prior experience.' },
+              { step: 'Stage 06', title: 'Bonded, insured, named',
+                body: 'Only after passing apprenticeship does a cleaner get added to our $2M bond and insurance policy — personally, in their name, not under a contractor umbrella. If anything happens, we handle it directly.' },
+            ].map((s, i) => (
+              <div key={i} className="border-l pl-8 py-2" style={{ borderColor: COLORS.terra }}>
+                <div className="text-xs uppercase tracking-[0.3em] opacity-60 mb-2"
+                     style={{ fontFamily: 'Manrope, sans-serif', color: COLORS.terra }}>
+                  {s.step}
+                </div>
+                <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 400, letterSpacing: '-0.01em' }}
+                    className="text-2xl mb-3">
+                  {s.title}
+                </h3>
+                <p className="opacity-80 leading-relaxed"
+                   style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {s.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How team matching works */}
+      <section className="py-24 md:py-32 px-6 md:px-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-12 gap-12">
+            <div className="md:col-span-5">
+              <div className="flex items-center gap-3 mb-4">
+                <SerifNum n={3}/>
+                <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                      className="text-xs uppercase tracking-[0.3em] opacity-60">
+                  Team Matching
+                </span>
+              </div>
+              <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                  className="text-4xl md:text-5xl leading-[0.95] mb-6">
+                Same team.<br/>Every time.
+              </h2>
+              <p className="opacity-80 leading-relaxed mb-6 text-lg"
+                 style={{ fontFamily: 'Manrope, sans-serif' }}>
+                When you book, we match you with a primary team based on your home's size, location,
+                scheduling needs, and any specialty requirements (pets, allergies, antiques, kids).
+                That team returns every visit.
+              </p>
+              <p className="opacity-70 leading-relaxed"
+                 style={{ fontFamily: 'Manrope, sans-serif' }}>
+                If your primary lead is ever sick or on vacation, your backup team has already been in
+                your home with them at least twice. You will never open the door to a total stranger.
+              </p>
+            </div>
+            <div className="md:col-span-7">
+              <div className="p-8 border"
+                   style={{ borderColor: COLORS.line, backgroundColor: COLORS.paper }}>
+                <div className="flex items-center gap-3 mb-6">
+                  <BadgeCheck size={20} style={{ color: COLORS.terra }}/>
+                  <span className="text-xs uppercase tracking-widest"
+                        style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    The Team Dossier — 24 hrs before your first clean
+                  </span>
+                </div>
+                <p className="mb-6 opacity-80"
+                   style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  Before we ever enter your home, you'll receive a digital dossier containing:
+                </p>
+                <ul className="space-y-3"
+                    style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {[
+                    'Full name & photo of each assigned team member',
+                    'Years of service with Hearth & Order',
+                    'Current certifications and training',
+                    'Specialties they bring to your home',
+                    'A short note from them — how they work, what to expect',
+                    'Direct text line to your team lead',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <Check size={16} className="mt-0.5 flex-shrink-0"
+                             style={{ color: COLORS.forest }}/>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 pt-6 border-t text-xs opacity-70"
+                     style={{ borderColor: COLORS.line, fontFamily: 'Manrope, sans-serif' }}>
+                  If, for any reason, you are not comfortable with your assigned team, you can request
+                  a different match before the first visit — no charge, no questions asked.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Continuing Ed */}
+      <section className="py-20 px-6 md:px-10"
+               style={{ backgroundColor: COLORS.paper,
+                        borderTop: `1px solid ${COLORS.line}`,
+                        borderBottom: `1px solid ${COLORS.line}` }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-3 mb-6">
+            <SerifNum n={4}/>
+            <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                  className="text-xs uppercase tracking-[0.3em] opacity-60">
+              Training That Doesn't Stop
+            </span>
+          </div>
+          <div className="grid md:grid-cols-3 gap-10">
+            <div className="md:col-span-1">
+              <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                  className="text-3xl md:text-4xl leading-tight">
+                Forty hours a year, paid.
+              </h2>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-lg opacity-80 leading-relaxed mb-6"
+                 style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Every cleaner on our team completes a minimum of 40 hours of paid continuing education
+                annually — on green chemistry, surface technology, health & safety updates, allergen
+                management, and the little things that separate a good clean from a remembered one.
+              </p>
+              <p className="opacity-70 leading-relaxed"
+                 style={{ fontFamily: 'Manrope, sans-serif' }}>
+                It's why you can ask your team about the right way to treat a marble countertop, or why
+                they pulled a specific product for your vintage rug. They know. We made sure.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <FinalCTA onBook={onBook}/>
+    </div>
+  );
+}
+
+/* =========================================================
+   SERVICES PAGE
+   ========================================================= */
+function ServicesPage({ onBook, go }) {
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Services"
+        title={<>Every clean,<br/>made <em style={{ color: COLORS.terra }}>yours.</em></>}
+        sub="Three tiers for homes. Three tiers for businesses. Every package can be tailored, and every tier is backed by our 24-hour re-clean guarantee."
+      />
+      <Services onBook={onBook}/>
+
+      <section className="py-24 px-6 md:px-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-3 mb-6">
+            <SerifNum n={2}/>
+            <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                  className="text-xs uppercase tracking-[0.3em] opacity-60">
+              What's Included — And What's Honestly Not
+            </span>
+          </div>
+          <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+              className="text-3xl md:text-5xl leading-tight mb-12 max-w-3xl">
+            We'd rather tell you clearly<br/>than surprise you later.
+          </h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="p-8" style={{ backgroundColor: COLORS.paper, border: `1px solid ${COLORS.line}` }}>
+              <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-2xl mb-4">
+                Always included
+              </h3>
+              <ul className="space-y-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                {[
+                  'All professional-grade, EPA-registered products',
+                  'All equipment (HEPA vacuums, microfiber sets, mop systems)',
+                  'Arrival photos, departure photos, completion checklist',
+                  'Direct-to-lead text line for the duration of your service',
+                  '24-hour re-clean guarantee at no additional cost',
+                  'Satisfaction-triggered payment — you confirm before we charge',
+                ].map((s, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <Check size={16} className="mt-0.5 flex-shrink-0" style={{ color: COLORS.forest }}/>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="p-8" style={{ backgroundColor: 'transparent', border: `1px solid ${COLORS.line}` }}>
+              <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 500 }} className="text-2xl mb-4">
+                Honest exclusions
+              </h3>
+              <ul className="space-y-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                {[
+                  'Biohazard cleanup (we can refer a specialist)',
+                  'Exterior window washing above the first story',
+                  'Mold remediation — needs a licensed abatement team',
+                  'Hoarding-scale decluttering — separate specialty service',
+                  'Moving furniture heavier than 50 lbs',
+                  'Pest control — also not our expertise',
+                ].map((s, i) => (
+                  <li key={i} className="flex items-start gap-3 opacity-80">
+                    <X size={16} className="mt-0.5 flex-shrink-0" style={{ color: COLORS.terra }}/>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <FinalCTA onBook={onBook}/>
+    </div>
+  );
+}
+
+/* =========================================================
+   PROMISE PAGE
+   ========================================================= */
+function PromisePage({ onBook, go }) {
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Our Promise"
+        title={<>If anything<br/>goes <em style={{ color: COLORS.terra }}>wrong.</em></>}
+        sub="Most cleaning companies bury their guarantees. Ours is on the homepage, in the footer, on your booking confirmation, and right here."
+      />
+
+      <section className="py-16 px-6 md:px-10">
+        <div className="max-w-5xl mx-auto space-y-8">
+          {[
+            { title: '24-Hour Re-Clean Guarantee',
+              body: 'Not satisfied with something? Text us a photo before end-of-day tomorrow. We return the next business day and re-clean the area — free, no paperwork, no conversation about who\'s right.' },
+            { title: 'Satisfaction-Triggered Payment',
+              body: 'Your card is authorized when you book, but not charged until your team lead marks the clean complete and you confirm. If something\'s off at the moment of completion, we fix it before payment processes. Full stop.' },
+            { title: '$2M Bonded & Insured — In Each Cleaner\'s Name',
+              body: 'Every cleaner is personally named on our $2M liability and theft-protection policy. Not a contractor umbrella. Not a loophole. If something breaks or goes missing, we resolve the claim directly within 48 hours.' },
+            { title: '24-Month Subscription Price Lock',
+              body: 'When you sign up for a recurring clean, the price is locked for 24 months. No creeping increases, no surprise "supplies fees," no renegotiation emails. The price you saw is the price you pay.' },
+            { title: 'Cancel Up to 24 Hrs Before — No Charge',
+              body: 'Life happens. Cancel any scheduled clean up to 24 hours before your arrival window at zero cost. Inside of 24 hours, we charge a 50% hold to cover the team\'s blocked time. That\'s it.' },
+            { title: 'Background Checks Re-Run Every 12 Months',
+              body: 'Not just at hire. Every team member\'s background check is re-run annually. If anything changes, we know immediately, and we act.' },
+          ].map((p, i) => (
+            <div key={i} className="p-8 flex gap-8 items-start"
+                 style={{ backgroundColor: COLORS.paper, border: `1px solid ${COLORS.line}` }}>
+              <div className="hidden md:block" style={{ minWidth: '4rem' }}>
+                <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, fontStyle: 'italic' }}
+                     className="text-5xl opacity-30">
+                  {String(i + 1).padStart(2, '0')}
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 style={{ fontFamily: 'Fraunces, serif', fontWeight: 500, letterSpacing: '-0.02em' }}
+                    className="text-2xl md:text-3xl mb-3">
+                  {p.title}
+                </h3>
+                <p className="opacity-80 leading-relaxed text-lg"
+                   style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {p.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Claims process */}
+      <section className="py-20 px-6 md:px-10"
+               style={{ backgroundColor: COLORS.forest, color: COLORS.bg }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <SerifNum n={2}/>
+            <span style={{ fontFamily: 'Manrope, sans-serif' }}
+                  className="text-xs uppercase tracking-[0.3em] opacity-70">
+              If You Need to File a Claim
+            </span>
+          </div>
+          <h2 style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+              className="text-3xl md:text-5xl mb-10 max-w-3xl leading-[1]">
+            Here is exactly what happens.
+          </h2>
+          <div className="space-y-5">
+            {[
+              { t: 'Within 2 hours', b: 'You text or email our claims line. A human responds — no forms, no bots.' },
+              { t: 'Within 24 hours', b: 'Our claims lead calls you, reviews photos and context, and confirms coverage.' },
+              { t: 'Within 48 hours', b: 'We issue a resolution: repair, replacement, or direct reimbursement. You choose which.' },
+              { t: 'Within 7 days', b: 'Money or replacement item is in your hands. In 11 years, we have never missed this window.' },
+            ].map((s, i) => (
+              <div key={i} className="flex gap-6 items-baseline border-b pb-5 last:border-0"
+                   style={{ borderColor: 'rgba(242,237,227,0.15)' }}>
+                <div className="w-32 flex-shrink-0 text-xs uppercase tracking-widest"
+                     style={{ fontFamily: 'Manrope, sans-serif', color: COLORS.terra }}>
+                  {s.t}
+                </div>
+                <div className="text-lg flex-1 opacity-90"
+                     style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {s.b}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <FearsSection/>
+      <FinalCTA onBook={onBook}/>
+    </div>
+  );
+}
+
+/* =========================================================
+   REVIEWS PAGE
+   ========================================================= */
+const ALL_REVIEWS = [
+  { stars: 5, cat: 'Home — Deep Clean', quote: 'I spent six months interviewing services after my previous cleaner disappeared with an heirloom. The Hearth team had me fill out a questionnaire about what mattered most in my home before they even gave me a quote. That call told me everything.', name: 'Priya S.', role: 'Brownstone owner, Brooklyn' },
+  { stars: 5, cat: 'Business — Medical', quote: "We run a pediatric practice. The bar for cleanliness and trust is impossibly high — parents notice every fingerprint. Hearth has been our cleaning team for four years. Same two people, every Tuesday night. That consistency is the whole thing.", name: 'Dr. Marcus Wen', role: 'Practice owner' },
+  { stars: 5, cat: 'Home — Essential', quote: "First newborn. Exhausted. Terrified of having anyone in the house. They sent me photos and bios of my team three days before, walked me through exactly what they'd do, and let me be in another room the whole time. I cried. It was the first clean home I'd seen in eight weeks.", name: 'Jules M.', role: 'New parent' },
+  { stars: 5, cat: 'Home — White Glove', quote: "I asked a lot of pointed questions on the first call. They answered every one without getting defensive. That was the tell. Six months in and my home has never looked better.", name: 'Alec P.', role: 'Architect' },
+  { stars: 4, cat: 'Home — Deep Clean', quote: "Not perfect — they missed the top of one bookcase the first visit. But they came back the next day without me having to argue about it, re-cleaned the whole room, and left a handwritten note. That's the company, right there.", name: 'Ren O.', role: 'Recurring client' },
+  { stars: 5, cat: 'Business — Office', quote: "We've gone through three commercial cleaning vendors in five years. Hearth is the first one whose work my team actually notices. Small touches. The water pitcher gets refilled. That sort of thing.", name: 'Priya C.', role: 'Office manager' },
+  { stars: 5, cat: 'Home — Subscription', quote: "Bi-weekly. Same two people. They know our dog's name. They know which rug can't get wet. That's not a cleaning service anymore, that's a relationship.", name: 'Lauren F.', role: 'Subscription client, 3 yrs' },
+  { stars: 5, cat: 'Business — Executive', quote: "Hosting a board meeting the morning after an event. I was panicking. Their reset team had the space spotless by 6 AM. Two directors asked me who we used.", name: 'Morgan K.', role: 'CEO, private firm' },
+  { stars: 5, cat: 'Home — Pet Household', quote: "Three dogs. Two cats. Elena handles it like it's nothing. We stopped apologizing about pet hair months ago.", name: 'Sandra V.', role: 'Recurring client' },
+];
+
+function ReviewsPage({ onBook, go }) {
+  const [filter, setFilter] = useState('All');
+  const cats = ['All', 'Home', 'Business'];
+  const filtered = ALL_REVIEWS.filter(r => filter === 'All' ? true : r.cat.startsWith(filter));
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Reviews"
+        title={<>What clients<br/><em style={{ color: COLORS.terra }}>actually say.</em></>}
+        sub="Unedited, unsolicited, and occasionally critical. We post the four-stars too — you'd know if we didn't."
+      />
+
+      {/* Aggregate */}
+      <section className="px-6 md:px-10 pb-14">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-0 border divide-x"
+             style={{ borderColor: COLORS.line, backgroundColor: COLORS.paper }}>
+          {[
+            { n: '4.9', l: 'Avg. rating / 5' },
+            { n: '3,128', l: 'Verified reviews' },
+            { n: '97%', l: 'Would recommend' },
+            { n: '94%', l: 'Subscription retention' },
+          ].map((s, i) => (
+            <div key={i} className="p-8" style={{ borderColor: COLORS.line }}>
+              <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 300, letterSpacing: '-0.02em' }}
+                   className="text-4xl md:text-5xl">
+                {s.n}
+              </div>
+              <div style={{ fontFamily: 'Manrope, sans-serif' }}
+                   className="text-xs uppercase tracking-widest opacity-60 mt-2">
+                {s.l}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Filter */}
+      <section className="px-6 md:px-10 pb-10">
+        <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap">
+          <span className="text-xs uppercase tracking-widest opacity-60 mr-2"
+                style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Filter
+          </span>
+          {cats.map(c => {
+            const active = filter === c;
+            return (
+              <button key={c} onClick={() => setFilter(c)}
+                      className="px-4 py-2 text-sm transition-all"
+                      style={{ border: `1px solid ${COLORS.ink}`,
+                               backgroundColor: active ? COLORS.ink : 'transparent',
+                               color: active ? COLORS.bg : COLORS.ink,
+                               fontFamily: 'Manrope, sans-serif' }}>
+                {c}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Reviews grid */}
+      <section className="px-6 md:px-10 pb-24">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((r, i) => (
+            <div key={i} className="p-7 flex flex-col"
+                 style={{ backgroundColor: COLORS.paper, border: `1px solid ${COLORS.line}` }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-1">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} size={12}
+                          fill={j < r.stars ? COLORS.terra : 'none'}
+                          color={COLORS.terra}/>
+                  ))}
+                </div>
+                <span className="text-[10px] uppercase tracking-widest opacity-60"
+                      style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {r.cat}
+                </span>
+              </div>
+              <blockquote style={{ fontFamily: 'Fraunces, serif', fontWeight: 400 }}
+                          className="text-base leading-relaxed mb-5 flex-1">
+                "{r.quote}"
+              </blockquote>
+              <div className="pt-4 border-t" style={{ borderColor: COLORS.line }}>
+                <div className="font-medium text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>{r.name}</div>
+                <div className="text-xs uppercase tracking-widest opacity-60 mt-1"
+                     style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {r.role}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <FinalCTA onBook={onBook}/>
+    </div>
+  );
+}
+
+/* =========================================================
+   MAIN APP  (with simple hash routing)
+   ========================================================= */
+const ROUTES = ['home', 'services', 'cleaners', 'promise', 'reviews'];
+
+function CleaningServiceSite() {
+  const [booking, setBooking] = useState(false);
+  const [page, setPage] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    return ROUTES.includes(hash) ? hash : 'home';
+  });
+
+  const go = (p) => {
+    if (!ROUTES.includes(p)) p = 'home';
+    window.location.hash = p === 'home' ? '' : p;
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      const hash = window.location.hash.replace('#', '');
+      setPage(ROUTES.includes(hash) ? hash : 'home');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  // Remove the initial loading placeholder the moment React takes over
+  useEffect(() => {
+    const boot = document.getElementById('boot');
+    if (boot) boot.remove();
+  }, []);
+
+  const openBooking = () => setBooking(true);
+
+  const renderPage = () => {
+    switch (page) {
+      case 'services': return <ServicesPage onBook={openBooking} go={go}/>;
+      case 'cleaners': return <CleanersPage onBook={openBooking} go={go}/>;
+      case 'promise':  return <PromisePage  onBook={openBooking} go={go}/>;
+      case 'reviews':  return <ReviewsPage  onBook={openBooking} go={go}/>;
+      default:
+        return (
+          <>
+            <Hero onBook={openBooking} go={go}/>
+            <TrustBar/>
+            <Services onBook={openBooking}/>
+            <VettingSection/>
+            <FearsSection/>
+            <Testimonials/>
+            <FinalCTA onBook={openBooking}/>
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="relative min-h-screen" style={{ color: COLORS.ink }}>
+      <GrainOverlay/>
+      <Nav onBook={openBooking} page={page} go={go}/>
+      <main>{renderPage()}</main>
+      <Footer/>
+      <BookingModal open={booking} onClose={() => setBooking(false)}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<CleaningServiceSite/>);
+</script>
+
+</body>
+</html>
